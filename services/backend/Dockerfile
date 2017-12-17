@@ -14,5 +14,5 @@ COPY . /usr/src/app
 RUN yarn global add pm2
 
 EXPOSE 4000
-ENTRYPOINT ["pm2-docker", "start", "--auto-exit", "--env", "production", "index.js", "--"]
+ENTRYPOINT ["pm2-docker", "start", "--auto-exit", "index.js", "--"]
 # ENTRYPOINT ["pm2-docker", "start", "-i", "2", "--auto-exit", "--env", "production", "index.js", "--"]

@@ -1,28 +1,22 @@
-const JSONStream = require('streaming-json-stringify');
+const JSONStream = require('JSONStream');
 const QueryStream = require('pg-query-stream');
-// const { PassThrough } = require('stream');
+const { PassThrough } = require('stream');
+const pool = require('./pool');
 
-module.exports = db => async (ctx) => {
-  const stream = JSONStream();
-  ctx.body = stream;
+module.exports = () => async (ctx) => {
+  const bodyStream = PassThrough();
+  ctx.body = bodyStream;
 
-  stream.on('error', ctx.onerror);
+  try {
+    const client = await pool.connect();
+    const query = new QueryStream('SELECT * FROM generate_series(0, $1) num', [10000]);
+    const stream = client.query(query);
 
-  const qs = new QueryStream('select * from users');
-  db
-    .stream(qs, (s) => {
-      s.on('error', ctx.onerror);
-      s.pipe(stream);
-    })
-    .then((data) => {
-      console.log(
-        'Total rows processed:',
-        data.processed,
-        'Duration in milliseconds:',
-        data.duration
-      );
-    })
-    .catch((error) => {
-      console.log('ERROR:', error);
-    });
+    // release the client when the stream is finished
+    stream.on('end', () => client.release());
+    stream.pipe(JSONStream.stringify()).pipe(bodyStream);
+  } catch (error) {
+    console.log('error', error);
+    console.error(error);
+  }
 };
